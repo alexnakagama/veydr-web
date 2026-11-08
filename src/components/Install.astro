@@ -1,0 +1,454 @@
+---
+import { REPO_URL, RELEASES_URL, formatDate, formatSize, type Release } from '../lib/release';
+
+interface Props {
+  release: Release;
+}
+const { release } = Astro.props;
+const { deb, appImage, sums } = release;
+
+type Line = { cmd?: string; comment?: string };
+
+const tabs: { id: string; label: string; hint: string; lines: Line[]; notes: string[] }[] = [
+  {
+    id: 'deb',
+    label: '.deb',
+    hint: 'Debian, Ubuntu · recommended',
+    lines: [
+      { comment: 'download the package and its checksums' },
+      { cmd: `curl -LO ${deb?.url}` },
+      { cmd: `curl -LO ${sums?.url}` },
+      { cmd: 'sha256sum --check --ignore-missing SHA256SUMS' },
+      { comment: 'install, then start it from your app menu or the terminal' },
+      { cmd: `sudo apt install ./${deb?.name}` },
+      { cmd: 'veydr' },
+    ],
+    notes: [
+      '<code>apt</code> pulls in the libraries Veydr needs. It installs to <code>/opt/Veydr</code>, links <code>/usr/bin/veydr</code> and adds a desktop entry.',
+      'Uninstall with <code>sudo apt remove veydr</code>. Your configuration in <code>~/.config/Veydr</code> is kept.',
+    ],
+  },
+  {
+    id: 'appimage',
+    label: 'AppImage',
+    hint: 'Other distributions',
+    lines: [
+      { cmd: `curl -LO ${appImage?.url}` },
+      { cmd: `curl -LO ${sums?.url}` },
+      { cmd: 'sha256sum --check --ignore-missing SHA256SUMS' },
+      { cmd: `chmod +x ${appImage?.name}` },
+      { cmd: `./${appImage?.name}` },
+    ],
+    notes: [
+      'Needs FUSE 2: <code>libfuse2</code> (Ubuntu 22.04), <code>libfuse2t64</code> (Ubuntu 24.04) or <code>fuse-libs</code> (Fedora). Or run it with <code>APPIMAGE_EXTRACT_AND_RUN=1</code>.',
+      'Needs unprivileged user namespaces, so it does not start on a stock Ubuntu 24.04 desktop. Use the <code>.deb</code> there.',
+    ],
+  },
+  {
+    id: 'source',
+    label: 'From source',
+    hint: 'Node.js 24 · npm 11.19+',
+    lines: [
+      { cmd: `git clone ${REPO_URL}.git` },
+      { cmd: 'cd veydr' },
+      { cmd: 'npm ci' },
+      { cmd: 'npm run dist:linux' },
+      { comment: 'both packages are written to dist/' },
+      { cmd: 'sudo apt install ./dist/Veydr-*-amd64.deb' },
+    ],
+    notes: [
+      'Builds the same <code>.deb</code> and AppImage as a release, named after the version in <code>package.json</code>.',
+      'The first run downloads electron-builder’s Linux packaging tools into <code>~/.cache/electron-builder</code>.',
+    ],
+  },
+];
+
+const copyText = (lines: Line[]) =>
+  lines.filter((l) => l.cmd).map((l) => l.cmd).join('\n');
+---
+
+<section id="install" class="install" aria-labelledby="install-h">
+  <div class="wrap">
+    <div class="head">
+      <h2 id="install-h">One window. <span>Two minutes to install.</span></h2>
+      <p class="meta mono">
+        <a href={release.url}>{release.tag}</a>
+        {release.prerelease && <span>release candidate</span>}
+        <span>{formatDate(release.publishedAt)}</span>
+        <span>Linux x64</span>
+      </p>
+    </div>
+
+    <div class="get">
+      <a href={deb?.url ?? RELEASES_URL} class="btn-primary">
+        <span class="dot" aria-hidden="true"></span>Download .deb
+        {deb?.size ? <span class="size">{formatSize(deb.size)}</span> : null}
+      </a>
+      <a href={appImage?.url ?? RELEASES_URL} class="ghost">
+        AppImage{appImage?.size ? ` · ${formatSize(appImage.size)}` : ''} <span class="arrow" aria-hidden="true">→</span>
+      </a>
+      <a href={RELEASES_URL} class="ghost">All releases <span class="arrow" aria-hidden="true">→</span></a>
+    </div>
+
+    <p class="os-note" data-os-note hidden>
+      You seem to be on <b data-os-name>another system</b>. Veydr runs on Linux x64 only for now. Windows support
+      is planned; <a href={`${REPO_URL}/releases`}>watch the releases</a> to hear about it.
+    </p>
+
+    <div class="panel">
+      <div class="tabs" role="tablist" aria-label="Install method">
+        {
+          tabs.map((t, i) => (
+            <button
+              type="button"
+              role="tab"
+              id={`tab-${t.id}`}
+              aria-controls={`panel-${t.id}`}
+              aria-selected={i === 0 ? 'true' : 'false'}
+              tabindex={i === 0 ? 0 : -1}
+              data-tab={t.id}
+            >
+              <span class="tl">{t.label}</span>
+              <span class="th">{t.hint}</span>
+            </button>
+          ))
+        }
+      </div>
+
+      {
+        tabs.map((t, i) => (
+          <div role="tabpanel" id={`panel-${t.id}`} aria-labelledby={`tab-${t.id}`} hidden={i !== 0} data-panel={t.id}>
+            <div class="code">
+              <button type="button" class="btn copy" data-copy={copyText(t.lines)}>
+                Copy
+              </button>
+              <div class="lines mono">
+                {t.lines.map((l) =>
+                  l.cmd ? (
+                    <div class="ln">
+                      <span class="p" aria-hidden="true">$ </span>
+                      {l.cmd}
+                    </div>
+                  ) : (
+                    <div class="ln c"># {l.comment}</div>
+                  ),
+                )}
+              </div>
+            </div>
+            <ul class="notes">
+              {t.notes.map((n) => (
+                <li set:html={n} />
+              ))}
+            </ul>
+          </div>
+        ))
+      }
+    </div>
+
+    <div class="after">
+      <div>
+        <h3>Check the download</h3>
+        <p>
+          Every package must report <code>OK</code> against <code>SHA256SUMS</code>. To also confirm it was built by
+          the repository’s release workflow, verify its attestation with the GitHub CLI:
+        </p>
+        <pre class="small"><span class="p">$ </span>gh attestation verify {deb?.name} --repo alexnakagama/veydr --signer-workflow alexnakagama/veydr/.github/workflows/release.yml</pre>
+        {
+          deb?.sha256 && (
+            <p class="sha mono">
+              <span>sha256</span> {deb.sha256}
+            </p>
+          )
+        }
+      </div>
+      <div>
+        <h3>Check the installation</h3>
+        <p>
+          The built-in smoke test checks the sandbox, the configuration directory, <code>/proc</code> access and the
+          interface, and exits with status 0 when everything passes.
+        </p>
+        <pre class="small"><span class="p">$ </span>veydr --smoke-test</pre>
+        <p class="more">
+          <a href={`${REPO_URL}/blob/master/docs/install-linux.md`}>Requirements and troubleshooting →</a>
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<style>
+  .install {
+    padding: 104px 0 112px;
+  }
+  .head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 16px 40px;
+  }
+  h2 {
+    font-size: clamp(34px, 4.8vw, 60px);
+    line-height: 1.02;
+    font-weight: 560;
+    letter-spacing: -0.038em;
+  }
+  h2 span {
+    color: var(--color-mute);
+  }
+  .meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 18px;
+    font-size: 12.5px;
+    color: var(--color-dim);
+  }
+  .meta a {
+    color: var(--color-fg);
+  }
+  .get {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 14px 28px;
+    margin-top: 40px;
+    font-size: 15px;
+  }
+  .size {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    font-weight: 400;
+    opacity: 0.6;
+  }
+  .os-note {
+    margin-top: 24px;
+    max-width: 640px;
+    padding: 12px 16px;
+    border: 1px solid var(--color-warn-bg);
+    border-radius: 6px;
+    background: #1d1810;
+    font-size: 14.5px;
+    line-height: 1.55;
+    color: var(--color-mute);
+  }
+  .os-note b {
+    color: var(--color-warn);
+    font-weight: 500;
+  }
+  .os-note a {
+    color: var(--color-fg);
+    border-bottom: 1px solid var(--color-line);
+  }
+
+  .panel {
+    margin-top: 40px;
+    border: 1px solid var(--color-line);
+    border-radius: 10px;
+    overflow: hidden;
+    background: var(--color-raised);
+  }
+  .tabs {
+    display: flex;
+    overflow-x: auto;
+    overflow-y: hidden;
+    border-bottom: 1px solid var(--color-line);
+  }
+  [role='tab'] {
+    flex: 1 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 14px 20px;
+    text-align: left;
+    border-right: 1px solid var(--color-line);
+    color: var(--color-mute);
+    cursor: pointer;
+    position: relative;
+    transition: color 0.15s, background 0.15s;
+  }
+  [role='tab']:last-child {
+    border-right: 0;
+  }
+  [role='tab']:hover {
+    color: var(--color-fg);
+  }
+  [role='tab'][aria-selected='true'] {
+    color: var(--color-fg);
+    background: var(--color-bg);
+  }
+  [role='tab'][aria-selected='true']::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 2px;
+    background: var(--color-brand);
+  }
+  .tl {
+    font-family: var(--font-mono);
+    font-size: 14px;
+  }
+  .th {
+    font-size: 12.5px;
+    color: var(--color-dim);
+  }
+
+  [role='tabpanel'] {
+    background: var(--color-bg);
+  }
+  .code {
+    position: relative;
+    background: var(--color-log);
+    border-bottom: 1px solid var(--color-line);
+  }
+  .code .lines {
+    padding: 22px 24px;
+    padding-right: 96px;
+    overflow-x: auto;
+    font-size: 13px;
+    line-height: 1.85;
+  }
+  .ln {
+    white-space: pre;
+  }
+  .ln.c {
+    color: var(--color-dim);
+  }
+  .p {
+    color: var(--color-dim);
+    user-select: none;
+  }
+  .copy {
+    position: absolute;
+    top: 14px;
+    right: 14px;
+    font-size: 12.5px;
+  }
+  .copy[data-done] {
+    color: var(--color-ok);
+  }
+  .notes {
+    display: grid;
+    gap: 10px;
+    padding: 20px 24px 24px;
+  }
+  .notes li {
+    position: relative;
+    padding-left: 18px;
+    font-size: 14.5px;
+    line-height: 1.6;
+    color: var(--color-mute);
+  }
+  .notes li::before {
+    content: '–';
+    position: absolute;
+    left: 0;
+    color: var(--color-dim);
+  }
+  .notes :global(code),
+  .after code {
+    font-family: var(--font-mono);
+    font-size: 0.88em;
+    color: var(--color-fg);
+  }
+
+  .after {
+    margin-top: 56px;
+    display: grid;
+    gap: 48px;
+  }
+  @media (min-width: 900px) {
+    .after {
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      gap: 56px;
+    }
+  }
+  .after h3 {
+    font-size: 16px;
+    font-weight: 560;
+  }
+  .after p {
+    margin-top: 8px;
+    font-size: 15px;
+    line-height: 1.6;
+    color: var(--color-mute);
+  }
+  .small {
+    margin-top: 16px;
+    padding: 12px 16px;
+    background: var(--color-log);
+    border: 1px solid var(--color-line-soft);
+    border-radius: 6px;
+    font-size: 12.5px;
+    overflow-x: auto;
+  }
+  .sha {
+    font-size: 11.5px !important;
+    word-break: break-all;
+    color: var(--color-dim) !important;
+  }
+  .sha span {
+    color: var(--color-mute);
+    margin-right: 6px;
+  }
+  .more a {
+    color: var(--color-fg);
+  }
+  .more a:hover {
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+</style>
+
+<script>
+  // Tabs (keyboard: arrow keys move between tabs)
+  const tabs = [...document.querySelectorAll<HTMLButtonElement>('[data-tab]')];
+  const show = (tab: HTMLButtonElement) => {
+    tabs.forEach((t) => {
+      const on = t === tab;
+      t.setAttribute('aria-selected', String(on));
+      t.tabIndex = on ? 0 : -1;
+      document.querySelector<HTMLElement>(`[data-panel="${t.dataset.tab}"]`)!.hidden = !on;
+    });
+  };
+  tabs.forEach((t, i) => {
+    t.addEventListener('click', () => show(t));
+    t.addEventListener('keydown', (e) => {
+      const d = e.key === 'ArrowRight' ? 1 : e.key === 'ArrowLeft' ? -1 : 0;
+      if (!d) return;
+      const next = tabs[(i + d + tabs.length) % tabs.length]!;
+      show(next);
+      next.focus();
+    });
+  });
+
+  // Copy buttons
+  document.querySelectorAll<HTMLButtonElement>('[data-copy]').forEach((b) => {
+    b.addEventListener('click', async () => {
+      try {
+        await navigator.clipboard.writeText(b.dataset.copy!);
+        b.textContent = 'Copied';
+        b.dataset.done = '';
+      } catch {
+        b.textContent = 'Select and copy';
+      }
+      setTimeout(() => {
+        b.textContent = 'Copy';
+        delete b.dataset.done;
+      }, 1600);
+    });
+  });
+
+  // Honest note for visitors who aren't on Linux
+  const ua = navigator.userAgent;
+  const os = /Android/i.test(ua) ? null
+    : /Windows/i.test(ua) ? 'Windows'
+    : /Mac OS X|Macintosh/i.test(ua) && !/iPhone|iPad/i.test(ua) ? 'macOS'
+    : null;
+  if (os) {
+    const note = document.querySelector<HTMLElement>('[data-os-note]')!;
+    note.querySelector('[data-os-name]')!.textContent = os;
+    note.hidden = false;
+  }
+</script>

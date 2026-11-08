@@ -1,0 +1,159 @@
+---
+const states = [
+  { state: 'idle', label: 'Idle', note: 'Configured, not running.' },
+  { state: 'starting', label: 'Starting', note: 'Spawned in its own process group.' },
+  { state: 'running', label: 'Running', note: 'PID and uptime, live output.' },
+  { state: 'stopping', label: 'Stopping', note: 'SIGTERM sent to the whole tree.' },
+  { state: 'exited', label: 'Exited', note: 'Exit code or signal, kept on screen.' },
+  { state: 'failed', label: 'Failed', note: 'With the reason, never a guess.' },
+];
+
+const blocks = [
+  {
+    title: 'It runs what you typed',
+    body: 'An executable with arguments runs directly, each argument passed exactly as written. Need pipes or &&? Pick a shell and it runs as a script.',
+    code: '<span class="p">$</span> node server.mjs --port 4000',
+  },
+  {
+    title: 'Stop means stopped',
+    body: 'SIGTERM goes to the command and every child it spawned. Whatever is still alive after the timeout gets SIGKILL, and anything that survives is listed.',
+    code: 'SIGTERM → pgid 209927  <span class="d">· 5s ·</span>  SIGKILL',
+  },
+  {
+    title: 'Nothing restarts on its own',
+    body: 'A command that exits stays exited until you press Start. When you quit Veydr, it stops what it started, and asks you before it leaves anything running.',
+    code: '<span class="y">Exited</span> <span class="d">·</span> code 1 <span class="d">· stays that way</span>',
+  },
+];
+---
+
+<section class="life" aria-labelledby="life-h">
+  <div class="wrap">
+    <h2 id="life-h">You press Start. <span>Veydr does exactly that, and no more.</span></h2>
+
+    <ol class="strip" aria-label="Command states">
+      {
+        states.map((s, i) => (
+          <li>
+            <span class="badge" data-state={s.state}>
+              {s.label}
+            </span>
+            <p>{s.note}</p>
+            {i < states.length - 1 && (
+              <span class="arrow" aria-hidden="true">
+                →
+              </span>
+            )}
+          </li>
+        ))
+      }
+    </ol>
+
+    <div class="blocks">
+      {
+        blocks.map((b) => (
+          <div class="block">
+            <h3>{b.title}</h3>
+            <p>{b.body}</p>
+            <code set:html={b.code} />
+          </div>
+        ))
+      }
+    </div>
+  </div>
+</section>
+
+<style>
+  .life {
+    padding: 96px 0 104px;
+    border-bottom: 1px solid var(--color-line);
+  }
+  h2 {
+    max-width: 820px;
+    font-size: clamp(32px, 4.4vw, 56px);
+    line-height: 1.04;
+    font-weight: 560;
+    letter-spacing: -0.035em;
+  }
+  h2 span {
+    color: var(--color-mute);
+  }
+
+  .strip {
+    margin-top: 56px;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1px;
+    background: var(--color-line);
+    border: 1px solid var(--color-line);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  .strip li {
+    position: relative;
+    background: var(--color-bg);
+    padding: 18px 18px 20px;
+  }
+  .strip p {
+    margin-top: 12px;
+    font-size: 13.5px;
+    line-height: 1.45;
+    color: var(--color-mute);
+  }
+  .arrow {
+    display: none;
+  }
+  @media (min-width: 900px) {
+    .strip {
+      grid-template-columns: repeat(6, minmax(0, 1fr));
+    }
+    .arrow {
+      display: block;
+      position: absolute;
+      top: 18px;
+      right: 14px;
+      color: var(--color-dim);
+      font-size: 13px;
+    }
+  }
+
+  .blocks {
+    margin-top: 64px;
+    display: grid;
+    gap: 40px;
+  }
+  @media (min-width: 900px) {
+    .blocks {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 48px;
+    }
+  }
+  .block h3 {
+    font-size: 16px;
+    font-weight: 560;
+  }
+  .block p {
+    margin-top: 8px;
+    font-size: 15px;
+    line-height: 1.6;
+    color: var(--color-mute);
+  }
+  .block code {
+    display: block;
+    margin-top: 18px;
+    padding: 11px 14px;
+    background: var(--color-log);
+    border: 1px solid var(--color-line-soft);
+    border-radius: 6px;
+    font-size: 12.5px;
+    white-space: nowrap;
+    overflow-x: auto;
+  }
+  .block code :global(.p),
+  .block code :global(.d) {
+    color: var(--color-dim);
+  }
+  .block code :global(.y) {
+    color: var(--color-warn);
+  }
+</style>

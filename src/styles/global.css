@@ -1,0 +1,230 @@
+@import 'tailwindcss';
+@import '@fontsource-variable/ibm-plex-sans';
+@import '@fontsource/ibm-plex-mono/400.css';
+@import '@fontsource/ibm-plex-mono/500.css';
+
+/* Tokens come straight from the app (src/renderer/src/styles.css in veydr),
+   so the page and the app are the same object. */
+@theme {
+  --color-bg: #111317;
+  --color-raised: #181b21;
+  --color-control: #20242c;
+  --color-control-hover: #232a36;
+  --color-log: #0c0e11;
+  --color-line: #262a33;
+  --color-line-soft: #1c1f26;
+  --color-fg: #e6e8ec;
+  --color-mute: #9aa1ad;
+  --color-dim: #626976;
+  --color-link: #6ea8fe;
+  --color-brand: #2dd4bf;
+  --color-ok: #8fd694;
+  --color-ok-bg: #1d2a22;
+  --color-warn: #f5c97a;
+  --color-warn-bg: #3a2a12;
+  --color-err: #ff9b9b;
+  --color-err-bg: #3a1618;
+
+  --font-sans: 'IBM Plex Sans Variable', system-ui, sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, 'DejaVu Sans Mono', monospace;
+}
+
+@layer base {
+  html {
+    background: var(--color-bg);
+    color: var(--color-fg);
+    font-family: var(--font-sans);
+    font-size: 16px;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+    overflow-x: clip;
+    scroll-behavior: smooth;
+    color-scheme: dark;
+  }
+
+  body {
+    background: var(--color-bg);
+    min-height: 100vh;
+  }
+
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-line) transparent;
+  }
+
+  ::selection {
+    background: #2dd4bf33;
+  }
+
+  :focus-visible {
+    outline: 2px solid #9cc2ff;
+    outline-offset: 3px;
+    border-radius: 4px;
+  }
+
+  code,
+  kbd,
+  pre,
+  .mono {
+    font-family: var(--font-mono);
+    font-feature-settings: 'zero' 0;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto;
+    }
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}
+
+@layer components {
+  .wrap {
+    width: 100%;
+    max-width: 1200px;
+    margin-inline: auto;
+    padding-inline: 16px;
+  }
+  @media (min-width: 640px) {
+    .wrap {
+      padding-inline: 32px;
+    }
+  }
+
+  /* Status pill, same shape as the app's state badge */
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    height: 20px;
+    padding: 0 8px;
+    border-radius: 999px;
+    font-size: 12px;
+    line-height: 1;
+    white-space: nowrap;
+    background: var(--color-control);
+    color: var(--color-mute);
+  }
+  .badge[data-state='running'] {
+    background: var(--color-ok-bg);
+    color: var(--color-ok);
+  }
+  .badge[data-state='starting'],
+  .badge[data-state='stopping'] {
+    background: var(--color-warn-bg);
+    color: var(--color-warn);
+  }
+  .badge[data-state='failed'] {
+    background: var(--color-err-bg);
+    color: var(--color-err);
+  }
+
+  /* Plain app button */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    height: 30px;
+    padding: 0 12px;
+    border: 1px solid var(--color-line);
+    border-radius: 6px;
+    background: var(--color-control);
+    color: var(--color-fg);
+    font-size: 14px;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s;
+  }
+  .btn:hover {
+    background: var(--color-control-hover);
+  }
+
+  /* The one bright button on the page */
+  .btn-primary {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    height: 44px;
+    padding: 0 20px;
+    border-radius: 6px;
+    background: var(--color-fg);
+    color: var(--color-bg);
+    font-weight: 550;
+    font-size: 15px;
+    transition: background 0.15s, transform 0.15s;
+  }
+  .btn-primary:hover {
+    background: #fff;
+    transform: translateY(-1px);
+  }
+  .btn-primary .dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--color-brand);
+  }
+
+  .ghost {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--color-mute);
+    transition: color 0.15s;
+  }
+  .ghost .arrow {
+    transition: transform 0.15s;
+  }
+  .ghost:hover {
+    color: var(--color-fg);
+  }
+  .ghost:hover .arrow {
+    transform: translateX(3px);
+  }
+
+  kbd {
+    display: inline-grid;
+    place-items: center;
+    min-width: 24px;
+    height: 24px;
+    padding: 0 6px;
+    border: 1px solid var(--color-line);
+    border-bottom-width: 2px;
+    border-radius: 5px;
+    background: var(--color-raised);
+    color: var(--color-fg);
+    font-size: 12px;
+  }
+
+  .prose-v p {
+    color: var(--color-mute);
+    line-height: 1.7;
+  }
+  .prose-v p + p {
+    margin-top: 14px;
+  }
+  .prose-v strong,
+  .prose-v b {
+    color: var(--color-fg);
+    font-weight: 500;
+  }
+  .prose-v code {
+    font-size: 0.88em;
+    color: var(--color-fg);
+    background: var(--color-raised);
+    border: 1px solid var(--color-line-soft);
+    padding: 1px 5px;
+    border-radius: 4px;
+  }
+  .prose-v a {
+    color: var(--color-fg);
+    border-bottom: 1px solid var(--color-line);
+    transition: border-color 0.15s;
+  }
+  .prose-v a:hover {
+    border-color: var(--color-mute);
+  }
+}

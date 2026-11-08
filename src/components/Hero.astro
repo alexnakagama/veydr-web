@@ -1,0 +1,222 @@
+---
+import { Image } from 'astro:assets';
+import AppWindow from './AppWindow.astro';
+import shot from '../assets/screenshots/projects-and-output.png';
+import { REPO_URL, type Release } from '../lib/release';
+
+interface Props {
+  release: Release;
+}
+const { release } = Astro.props;
+---
+
+<section class="hero">
+  <div class="wrap grid">
+    <div class="copy">
+      <p class="tag mono">
+        <span class="dot" aria-hidden="true"></span>
+        {release.tag}{release.prerelease && <span class="rc"> · release candidate</span>} · Linux x64
+      </p>
+      <h1>
+        One window for <span>all your local dev commands.</span>
+      </h1>
+      <p class="sub">
+        Veydr starts, stops and watches the servers, workers and scripts of every project you work on.{' '}
+        <b>It does nothing unless you ask</b>, and nothing it sees leaves your machine.
+      </p>
+      <div class="cta">
+        <a href="#install" class="btn-primary"><span class="dot" aria-hidden="true"></span>Download for Linux</a>
+        <a href={REPO_URL} class="ghost">View source on GitHub <span class="arrow" aria-hidden="true">→</span></a>
+      </div>
+      <dl class="stats">
+        <div><dt>1</dt><dd>window for every project</dd></div>
+        <div><dt>0</dt><dd>accounts, telemetry or update checks</dd></div>
+        <div><dt>MIT</dt><dd>licensed, built in the open</dd></div>
+      </dl>
+    </div>
+
+    <div class="stage">
+      <div class="tilt">
+        <AppWindow />
+      </div>
+    </div>
+
+    <figure class="still">
+      <Image
+        src={shot}
+        alt="The Veydr window: the storefront project with three running commands and the live output of the API server"
+        widths={[640, 960, 1280]}
+        sizes="(min-width: 640px) 90vw, 100vw"
+        loading="eager"
+      />
+    </figure>
+  </div>
+  <p class="hint">This window works. Press <b>Stop</b>.</p>
+</section>
+
+<style>
+  .hero {
+    position: relative;
+    border-bottom: 1px solid var(--color-line);
+    overflow: hidden;
+  }
+  .grid {
+    position: relative;
+    padding-top: 56px;
+    padding-bottom: 72px;
+  }
+  .copy {
+    position: relative;
+    z-index: 2;
+    max-width: 560px;
+  }
+  .tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 12.5px;
+    color: var(--color-mute);
+    padding: 5px 12px 5px 10px;
+    border: 1px solid var(--color-line);
+    border-radius: 999px;
+  }
+  .dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--color-brand);
+  }
+  h1 {
+    margin-top: 28px;
+    font-weight: 560;
+    font-size: clamp(42px, 6.4vw, 76px);
+    line-height: 1;
+    letter-spacing: -0.042em;
+  }
+  h1 span {
+    color: var(--color-mute);
+  }
+  .sub {
+    margin-top: 26px;
+    max-width: 500px;
+    font-size: 18px;
+    line-height: 1.6;
+    color: var(--color-mute);
+  }
+  .sub b {
+    color: var(--color-fg);
+    font-weight: 500;
+  }
+  .cta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 14px 24px;
+    margin-top: 34px;
+    font-size: 15px;
+  }
+  .stats {
+    display: grid;
+    grid-template-columns: repeat(3, auto);
+    justify-content: start;
+    gap: 22px 28px;
+    margin-top: 56px;
+  }
+  @media (min-width: 640px) {
+    .stats {
+      gap: 22px 44px;
+    }
+  }
+  @media (max-width: 479px) {
+    .rc {
+      display: none;
+    }
+    .stats dt {
+      font-size: 24px !important;
+    }
+    .stats dd {
+      font-size: 12px !important;
+    }
+  }
+  .stats dt {
+    font-weight: 560;
+    font-size: 30px;
+    letter-spacing: -0.03em;
+    font-variant-numeric: tabular-nums;
+  }
+  .stats dd {
+    max-width: 130px;
+    font-size: 13px;
+    line-height: 1.4;
+    color: var(--color-dim);
+  }
+
+  /* Live window: desktop only */
+  .stage {
+    display: none;
+  }
+  .still {
+    margin-top: 48px;
+    border: 1px solid var(--color-line);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  .still img {
+    display: block;
+    width: 100%;
+    height: auto;
+  }
+  .hint {
+    display: none;
+  }
+
+  @media (min-width: 1100px) {
+    .grid {
+      min-height: 760px;
+      display: flex;
+      align-items: center;
+      padding-top: 40px;
+      padding-bottom: 96px;
+    }
+    .copy {
+      max-width: 520px;
+    }
+    .still {
+      display: none;
+    }
+    .stage {
+      display: block;
+      position: absolute;
+      top: 50%;
+      left: calc(50% - 10px);
+      translate: 0 -50%;
+      perspective: 2400px;
+      z-index: 1;
+    }
+    .tilt {
+      transform: rotateY(-14deg) rotateX(5deg) rotateZ(1deg);
+      transform-origin: 0% 50%;
+      animation: settle 1.1s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+    }
+    .hint {
+      display: block;
+      position: absolute;
+      right: 32px;
+      bottom: 24px;
+      z-index: 2;
+      font-size: 13px;
+      color: var(--color-dim);
+    }
+    .hint b {
+      color: var(--color-mute);
+      font-weight: 500;
+    }
+  }
+
+  @keyframes settle {
+    from {
+      opacity: 0;
+      transform: rotateY(-22deg) rotateX(8deg) rotateZ(1deg) translateX(40px);
+    }
+  }
+</style>

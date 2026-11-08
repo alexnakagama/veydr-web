@@ -1,0 +1,27 @@
+---
+import Base from '../layouts/Base.astro';
+import Nav from '../components/Nav.astro';
+import Hero from '../components/Hero.astro';
+import Lifecycle from '../components/Lifecycle.astro';
+import Readme from '../components/Readme.astro';
+import Install from '../components/Install.astro';
+import Footer from '../components/Footer.astro';
+import { getRelease } from '../lib/release';
+
+const release = await getRelease();
+---
+
+<Base
+  title="Veydr: one window for all your local dev commands"
+  description="Veydr is a Linux desktop app that starts, stops and watches the servers, workers and scripts of all your local projects. Local-only, no telemetry, MIT licensed."
+  version={release.version}
+>
+  <Nav />
+  <main>
+    <Hero release={release} />
+    <Lifecycle />
+    <Readme />
+    <Install release={release} />
+  </main>
+  <Footer release={release} />
+</Base>

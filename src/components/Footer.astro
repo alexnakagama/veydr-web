@@ -1,0 +1,94 @@
+---
+import Mark from '../assets/brand/veydr-mark.svg';
+import { REPO_URL, RELEASES_URL, type Release } from '../lib/release';
+
+interface Props {
+  release: Release;
+}
+const { release } = Astro.props;
+const year = new Date().getFullYear();
+---
+
+<footer class="foot">
+  <div class="wrap grid">
+    <div class="id">
+      <Mark width={28} height={28} aria-hidden="true" />
+      <p>One window for all your local dev commands.</p>
+      <p class="dim">Open source, MIT license · {release.tag}</p>
+    </div>
+    <nav aria-label="Product">
+      <h3>Product</h3>
+      <a href="#install">Install</a>
+      <a href={RELEASES_URL}>Releases</a>
+      <a href="#limits">Known limitations</a>
+    </nav>
+    <nav aria-label="Learn">
+      <h3>Learn</h3>
+      <a href={`${REPO_URL}#readme`}>README</a>
+      <a href={`${REPO_URL}/tree/master/docs`}>Documentation</a>
+      <a href={`${REPO_URL}/blob/master/docs/security-baseline.md`}>Security baseline</a>
+    </nav>
+    <nav aria-label="Project">
+      <h3>Project</h3>
+      <a href={REPO_URL}>GitHub</a>
+      <a href={`${REPO_URL}/issues`}>Report an issue</a>
+      <a href={`${REPO_URL}/blob/master/LICENSE`}>License</a>
+    </nav>
+  </div>
+  <div class="wrap base">
+    <span>© {year} Veydr contributors</span>
+    <span class="mono">This page uses no cookies and no analytics.</span>
+  </div>
+</footer>
+
+<style>
+  .foot {
+    border-top: 1px solid var(--color-line);
+    padding: 56px 0 32px;
+    font-size: 14px;
+  }
+  .grid {
+    display: grid;
+    gap: 40px;
+  }
+  @media (min-width: 800px) {
+    .grid {
+      grid-template-columns: 2fr 1fr 1fr 1fr;
+    }
+  }
+  .id p {
+    margin-top: 14px;
+    color: var(--color-mute);
+  }
+  .id .dim {
+    margin-top: 6px;
+    color: var(--color-dim);
+    font-size: 13px;
+  }
+  nav {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  h3 {
+    font-size: 12px;
+    color: var(--color-dim);
+    margin-bottom: 4px;
+  }
+  nav a {
+    color: var(--color-mute);
+    transition: color 0.15s;
+  }
+  nav a:hover {
+    color: var(--color-fg);
+  }
+  .base {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 8px 24px;
+    margin-top: 56px;
+    font-size: 12.5px;
+    color: var(--color-dim);
+  }
+</style>

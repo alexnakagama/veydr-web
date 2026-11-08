@@ -1,0 +1,581 @@
+---
+// A working HTML rebuild of the Veydr window (projects + output pane).
+// Buttons really change state, so the hero demonstrates the product instead of
+// decorating it. Small screens get the real screenshot instead (see Hero).
+const commands = [
+  { id: 'api', name: 'API server', cmd: 'node server.mjs', pid: 209927 },
+  { id: 'web', name: 'Web dev server', cmd: 'node dev.mjs', pid: 209935 },
+  {
+    id: 'worker',
+    name: 'Jobs worker',
+    cmd: 'i=0; while true; do i=$((i+1)); echo "[worker] processed email job #$i"; sleep 2; done',
+    shell: '/bin/bash',
+    pid: 209943,
+  },
+];
+---
+
+<div class="win" data-demo role="region" aria-label="Interactive demo of the Veydr window">
+  <aside class="side" aria-hidden="true">
+    <div class="app">Veydr</div>
+    <ul class="menu">
+      <li class="on">Projects</li>
+      <li>Ports</li>
+      <li>Settings</li>
+      <li>About</li>
+    </ul>
+    <div class="label">Projects</div>
+    <div class="filter">Filter (/)</div>
+    <ul class="plist">
+      <li class="on">storefront</li>
+      <li>docs-site</li>
+    </ul>
+    <div class="ver">Veydr 0.1.0 · linux</div>
+  </aside>
+
+  <div class="main">
+    <div class="top">
+      <span class="h">Projects</span>
+      <span class="add">Add project</span>
+    </div>
+    <div class="proj">
+      <div class="pname">storefront</div>
+      <div class="ppath">/home/you/projects/storefront</div>
+      <ul class="cmds">
+        {
+          commands.map((c, i) => (
+            <li class:list={['cmd', { sel: i === 0 }]} data-cmd={c.id} data-pid={c.pid}>
+              <div class="line1">
+                <button type="button" class="cname" data-select aria-label={`Show output of ${c.name}`}>
+                  {c.name}
+                </button>
+                {c.shell && <span class="shell">Shell: {c.shell}</span>}
+                <span class="badge" data-state="running" data-badge>
+                  Running
+                </span>
+                <span class="meta" data-meta>
+                  PID {c.pid} · up 0:10
+                </span>
+                <span class="acts">
+                  <button type="button" class="b" data-act="start" disabled>
+                    Start
+                  </button>
+                  <button type="button" class="b" data-act="stop">
+                    Stop
+                  </button>
+                  <button type="button" class="b" data-act="restart">
+                    Restart
+                  </button>
+                </span>
+              </div>
+              <code class="cline">{c.cmd}</code>
+            </li>
+          ))
+        }
+      </ul>
+    </div>
+
+    <div class="out">
+      <div class="ohead">
+        <span><b>Output</b> — <span data-oname>API server</span></span>
+        <span class="ofilter" aria-hidden="true">Filter output</span>
+        <span class="b" aria-hidden="true">Both streams ▾</span>
+        <button type="button" class="b" data-pause>Pause</button>
+      </div>
+      <div class="log" data-log aria-live="off"></div>
+    </div>
+  </div>
+</div>
+
+<style>
+  .win {
+    --w-bg: var(--color-bg);
+    display: grid;
+    grid-template-columns: 196px 1fr;
+    width: 920px;
+    height: 600px;
+    background: var(--w-bg);
+    border: 1px solid var(--color-line);
+    border-radius: 10px;
+    overflow: hidden;
+    font-size: 13px;
+    color: var(--color-fg);
+    box-shadow:
+      0 0 0 1px #00000080,
+      0 40px 80px -20px #000000d0;
+    user-select: none;
+  }
+
+  /* Sidebar */
+  .side {
+    display: flex;
+    flex-direction: column;
+    background: var(--color-raised);
+    border-right: 1px solid var(--color-line);
+    padding: 16px 10px;
+  }
+  .app {
+    font-weight: 600;
+    font-size: 15px;
+    padding: 0 8px 14px;
+  }
+  .menu li,
+  .plist li {
+    padding: 6px 8px;
+    border-radius: 6px;
+    color: var(--color-mute);
+  }
+  .menu li.on {
+    background: var(--color-control);
+    color: var(--color-fg);
+  }
+  .label {
+    margin: 16px 8px 8px;
+    font-size: 10.5px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--color-mute);
+    font-weight: 600;
+  }
+  .filter {
+    margin: 0 0 8px;
+    padding: 6px 8px;
+    border: 1px solid var(--color-line);
+    border-radius: 6px;
+    background: var(--color-log);
+    color: var(--color-dim);
+  }
+  .plist li {
+    padding-left: 14px;
+    color: var(--color-fg);
+  }
+  .plist li.on {
+    background: var(--color-control);
+  }
+  .ver {
+    margin-top: auto;
+    padding: 0 8px;
+    font-size: 11.5px;
+    color: var(--color-mute);
+  }
+
+  /* Main column */
+  .main {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+  }
+  .top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 18px 20px 8px;
+  }
+  .h {
+    font-size: 18px;
+    font-weight: 600;
+  }
+  .add {
+    padding: 5px 10px;
+    border: 1px solid var(--color-link);
+    border-radius: 6px;
+    color: var(--color-link);
+    font-size: 12.5px;
+  }
+  .proj {
+    padding: 0 20px;
+  }
+  .pname {
+    font-weight: 600;
+    font-size: 14.5px;
+  }
+  .ppath {
+    color: var(--color-mute);
+    font-size: 11.5px;
+    margin: 2px 0 10px;
+  }
+  .cmds {
+    border: 1px solid var(--color-line);
+    border-radius: 6px;
+    background: var(--color-raised);
+    overflow: hidden;
+  }
+  .cmd {
+    padding: 8px 10px 8px 12px;
+    border-left: 2px solid transparent;
+  }
+  .cmd + .cmd {
+    border-top: 1px solid var(--color-line);
+  }
+  .cmd.sel {
+    border-left-color: var(--color-link);
+    background: #1b1f26;
+  }
+  .line1 {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .cname {
+    font: inherit;
+    color: var(--color-fg);
+    cursor: pointer;
+    padding: 0;
+    background: none;
+    border: 0;
+  }
+  .cname:hover {
+    text-decoration: underline;
+    text-decoration-color: var(--color-dim);
+    text-underline-offset: 3px;
+  }
+  .shell {
+    font-size: 11px;
+    padding: 1px 6px;
+    border: 1px solid var(--color-line);
+    border-radius: 4px;
+    color: var(--color-mute);
+  }
+  .meta {
+    color: var(--color-mute);
+    font-size: 11.5px;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+  .acts {
+    margin-left: auto;
+    display: flex;
+    gap: 5px;
+  }
+  .b {
+    font: inherit;
+    font-size: 12px;
+    padding: 3px 9px;
+    border: 1px solid var(--color-line);
+    border-radius: 5px;
+    background: var(--color-control);
+    color: var(--color-fg);
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  button.b:hover:not(:disabled) {
+    background: var(--color-control-hover);
+  }
+  .b:disabled {
+    color: var(--color-dim);
+    background: transparent;
+    cursor: default;
+  }
+  .cline {
+    display: block;
+    margin-top: 3px;
+    font-size: 11.5px;
+    color: var(--color-mute);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  /* Output pane */
+  .out {
+    margin-top: auto;
+    border-top: 1px solid var(--color-line);
+    display: flex;
+    flex-direction: column;
+    height: 268px;
+  }
+  .ohead {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 12px 7px 16px;
+    background: var(--color-raised);
+    border-bottom: 1px solid var(--color-line);
+  }
+  .ohead > span:first-child {
+    margin-right: auto;
+    color: var(--color-mute);
+  }
+  .ohead b {
+    color: var(--color-fg);
+    font-weight: 600;
+  }
+  .ofilter {
+    width: 150px;
+    padding: 3px 8px;
+    border: 1px solid var(--color-line);
+    border-radius: 5px;
+    background: var(--color-log);
+    color: var(--color-dim);
+    font-size: 12px;
+  }
+  .log {
+    flex: 1;
+    overflow: hidden;
+    background: var(--color-log);
+    padding: 6px 12px;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    line-height: 20px;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+  }
+  .log :global(.l) {
+    white-space: pre;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .log :global(.t) {
+    color: var(--color-mute);
+  }
+  .log :global(.s) {
+    color: var(--color-mute);
+    margin: 0 8px;
+  }
+  .log :global(.s.err) {
+    color: var(--color-err);
+  }
+  .log :global(.g) {
+    color: var(--color-ok);
+  }
+  .log :global(.y) {
+    color: var(--color-warn);
+  }
+  .log :global(.c) {
+    color: #7dd3fc;
+  }
+  .log :global(.k) {
+    font-weight: 600;
+  }
+  .log :global(.d) {
+    color: var(--color-dim);
+  }
+</style>
+
+<script>
+  type State = 'idle' | 'starting' | 'running' | 'stopping' | 'exited';
+  type Line = { t: string; err: boolean; html: string };
+
+  interface Cmd {
+    el: HTMLElement;
+    name: string;
+    pid: number;
+    state: State;
+    started: number;
+    lines: Line[];
+    n: number;
+    every: number;
+    gen: (c: Cmd) => [boolean, string] | null;
+    boot?: string[];
+  }
+
+  const root = document.querySelector<HTMLElement>('[data-demo]');
+  if (root) init(root);
+
+  function init(root: HTMLElement) {
+    const logEl = root.querySelector<HTMLElement>('[data-log]')!;
+    const oname = root.querySelector<HTMLElement>('[data-oname]')!;
+    const pauseBtn = root.querySelector<HTMLButtonElement>('[data-pause]')!;
+    const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const MAX = 40;
+
+    const routes: [string, string, number][] = [
+      ['GET', '/api/products', 200],
+      ['GET', '/api/products/42', 200],
+      ['POST', '/api/cart', 201],
+      ['GET', '/api/session', 200],
+      ['POST', '/api/checkout', 201],
+      ['GET', '/api/orders/981', 404],
+      ['GET', '/api/health', 200],
+    ];
+    const files = ['src/App.tsx', 'src/routes/cart.tsx', 'src/components/Price.tsx', 'src/styles.css'];
+
+    const pad = (s: string, n: number) => s + ' '.repeat(Math.max(1, n - s.length));
+
+    const gens: Record<string, Pick<Cmd, 'gen' | 'every' | 'boot'>> = {
+      api: {
+        every: 1,
+        boot: ['<span class="d">listening on</span> <span class="c">http://localhost:4000</span>'],
+        gen: (c) => {
+          if (c.n % 9 === 8) return [true, '<span class="y">warn</span> slow query on orders (138ms)'];
+          const [m, p, s] = routes[c.n % routes.length]!;
+          const ms = 4 + ((c.n * 7) % 40);
+          const col = s >= 400 ? 'y' : 'g';
+          return [false, `<span class="k">${pad(m, 5)}</span>${pad(p, 22)}<span class="${col}">${s}</span> ${ms}ms`];
+        },
+      },
+      web: {
+        every: 6,
+        boot: [
+          '<span class="g k">VITE</span> <span class="g">v6.2.0</span>  ready in <span class="k">412</span> ms',
+          '<span class="g">➜</span>  <span class="k">Local</span>:   <span class="c">http://localhost:5173/</span>',
+        ],
+        gen: (c) => [
+          false,
+          `<span class="d">${clock().slice(0, 8)}</span> <span class="c">[vite]</span> <span class="g">hmr update</span> <span class="d">/${files[c.n % files.length]}</span>`,
+        ],
+      },
+      worker: {
+        every: 5,
+        gen: (c) => [false, `[worker] processed email job #${c.n + 1}`],
+      },
+    };
+
+    const cmds = new Map<string, Cmd>();
+    root.querySelectorAll<HTMLElement>('[data-cmd]').forEach((el) => {
+      const id = el.dataset.cmd!;
+      const name = el.querySelector('.cname')!.textContent!.trim();
+      cmds.set(id, {
+        el,
+        name,
+        pid: Number(el.dataset.pid),
+        state: 'running',
+        started: Date.now() - 10_000,
+        lines: [],
+        n: 0,
+        ...gens[id]!,
+      });
+    });
+
+    let selected = 'api';
+    let paused = false;
+    let tick = 0;
+
+    function clock(at = Date.now()) {
+      const d = new Date(at);
+      const p = (n: number, w = 2) => String(n).padStart(w, '0');
+      return `${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}.${p(d.getMilliseconds(), 3)}`;
+    }
+
+    function push(c: Cmd, err: boolean, html: string, at?: number) {
+      c.lines.push({ t: clock(at), err, html });
+      if (c.lines.length > MAX) c.lines.shift();
+    }
+
+    function note(c: Cmd, text: string) {
+      push(c, false, `<span class="d">${text}</span>`);
+    }
+
+    function uptime(c: Cmd) {
+      const s = Math.floor((Date.now() - c.started) / 1000);
+      return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+    }
+
+    function paint(c: Cmd) {
+      const badge = c.el.querySelector<HTMLElement>('[data-badge]')!;
+      const meta = c.el.querySelector<HTMLElement>('[data-meta]')!;
+      const label = { idle: 'Idle', starting: 'Starting', running: 'Running', stopping: 'Stopping', exited: 'Exited' }[c.state];
+      badge.dataset.state = c.state;
+      badge.textContent = label;
+      meta.textContent =
+        c.state === 'running' ? `PID ${c.pid} · up ${uptime(c)}`
+        : c.state === 'exited' ? 'signal SIGTERM'
+        : c.state === 'stopping' ? `PID ${c.pid} · SIGTERM sent`
+        : '';
+      const busy = c.state === 'starting' || c.state === 'stopping';
+      const alive = c.state === 'running';
+      (c.el.querySelector('[data-act=start]') as HTMLButtonElement).disabled = alive || busy;
+      (c.el.querySelector('[data-act=stop]') as HTMLButtonElement).disabled = !alive;
+      (c.el.querySelector('[data-act=restart]') as HTMLButtonElement).disabled = !alive;
+    }
+
+    function render() {
+      const c = cmds.get(selected)!;
+      logEl.innerHTML = c.lines
+        .slice(-14)
+        .map(
+          (l) =>
+            `<div class="l"><span class="t">${l.t}</span><span class="s${l.err ? ' err' : ''}">${l.err ? 'err' : 'out'}</span>${l.html}</div>`,
+        )
+        .join('');
+    }
+
+    function start(c: Cmd) {
+      c.state = 'starting';
+      paint(c);
+      setTimeout(() => {
+        c.pid += 31 + Math.floor(Math.random() * 400);
+        c.state = 'running';
+        c.started = Date.now();
+        c.n = 0;
+        c.boot?.forEach((b) => push(c, false, b));
+        paint(c);
+        if (cmds.get(selected) === c) render();
+      }, 450);
+    }
+
+    function stop(c: Cmd, then?: () => void) {
+      c.state = 'stopping';
+      paint(c);
+      setTimeout(() => {
+        c.state = 'exited';
+        note(c, `— stopped: process group ${c.pid} ended after SIGTERM —`);
+        paint(c);
+        if (cmds.get(selected) === c) render();
+        then?.();
+      }, 650);
+    }
+
+    function select(id: string) {
+      selected = id;
+      cmds.forEach((c, k) => c.el.classList.toggle('sel', k === id));
+      oname.textContent = cmds.get(id)!.name;
+      render();
+    }
+
+    root.addEventListener('click', (e) => {
+      const t = e.target as HTMLElement;
+      const row = t.closest<HTMLElement>('[data-cmd]');
+      if (row) {
+        const c = cmds.get(row.dataset.cmd!)!;
+        const act = t.closest<HTMLElement>('[data-act]')?.dataset.act;
+        if (act === 'start') start(c);
+        if (act === 'stop') stop(c);
+        if (act === 'restart') stop(c, () => start(c));
+        select(row.dataset.cmd!);
+        return;
+      }
+      if (t.closest('[data-pause]')) {
+        paused = !paused;
+        pauseBtn.textContent = paused ? 'Follow' : 'Pause';
+        if (!paused) render();
+      }
+    });
+
+    // Seed some history so the pane is never empty.
+    const now = Date.now();
+    cmds.forEach((c) => {
+      const step = 420 * c.every;
+      const at = (i: number) => now - (16 - i) * step + Math.floor(Math.random() * 30);
+      c.boot?.forEach((b) => push(c, false, b, at(-1)));
+      for (let i = 0; i < 16; i++) {
+        const line = c.gen(c);
+        if (line) push(c, line[0], line[1], at(i));
+        c.n++;
+      }
+    });
+    cmds.forEach(paint);
+    render();
+
+    if (reduced) return;
+
+    let visible = true;
+    new IntersectionObserver(([entry]) => (visible = !!entry?.isIntersecting)).observe(root);
+
+    setInterval(() => {
+      if (!visible || document.hidden) return;
+      tick++;
+      cmds.forEach((c) => {
+        if (c.state !== 'running') return;
+        if (tick % c.every === 0) {
+          const line = c.gen(c);
+          if (line) push(c, line[0], line[1]);
+          c.n++;
+        }
+        if (tick % 2 === 0) paint(c);
+      });
+      if (!paused) render();
+    }, 420);
+  }
+</script>

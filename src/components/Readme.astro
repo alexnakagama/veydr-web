@@ -1,0 +1,549 @@
+---
+import { Image } from 'astro:assets';
+import editorShot from '../assets/screenshots/command-editor.png';
+import envShot from '../assets/screenshots/command-environment.png';
+import portsShot from '../assets/screenshots/ports.png';
+import { REPO_URL } from '../lib/release';
+
+const chapters = [
+  ['projects', 'Register a project once'],
+  ['supervision', 'Stop means the whole tree'],
+  ['output', 'Output you can read'],
+  ['ports', 'Who is on :5173?'],
+  ['environment', 'The environment it really gets'],
+  ['keyboard', 'Hands on the keyboard'],
+  ['local', 'Nothing leaves your machine'],
+  ['limits', 'What it doesn’t do (yet)'],
+  ['faq', 'Questions'],
+] as const;
+
+const num = (id: string) =>
+  String(chapters.findIndex(([c]) => c === id) + 1).padStart(2, '0');
+
+const shortcuts = [
+  [['s'], 'Start the selected command'],
+  [['x'], 'Stop the selected command'],
+  [['r'], 'Restart the selected command'],
+  [['/'], 'Focus the project filter'],
+  [['j', 'k'], 'Next / previous project'],
+  [['?'], 'Show all shortcuts'],
+] as const;
+
+const local = [
+  ['accounts', 'None. There is nothing to sign in to.'],
+  ['telemetry', 'None. No usage data, no crash reports.'],
+  ['update checks', 'None. You update when you choose to.'],
+  ['remote content', 'None. The interface loads nothing from the network.'],
+  ['~/.config/Veydr/', 'One JSON file, mode 0600, saved atomically with a backup.'],
+  ['sandbox', 'Chromium sandbox with context isolation. Veydr refuses to start without it.'],
+];
+
+const faq = [
+  {
+    q: 'Is Veydr a terminal emulator?',
+    a: 'No, on purpose. Commands get no interactive input, and only colors are rendered. It is for the long-running things you start and watch, not for typing into.',
+  },
+  {
+    q: 'Does it restart a command that crashes?',
+    a: 'No. There is no auto-restart and no watch mode. A command that exits shows its exit code or signal and stays that way until you press Start.',
+  },
+  {
+    q: 'Which systems does it run on?',
+    a: 'Linux x64. The packages pass the built-in smoke test on Debian 12 and 13, Ubuntu 22.04 and Fedora 44 (AppImage). Ubuntu 24.04 passes in a container but has not been validated on a real host yet. Windows is planned; macOS is not supported.',
+  },
+  {
+    q: 'What happens if Veydr itself crashes?',
+    a: 'Your commands keep running. On the next launch Veydr lists the processes they left behind, and you choose to Terminate them or Leave running. It never signals anything on its own.',
+  },
+  {
+    q: 'Where is my data?',
+    a: 'In ~/.config/Veydr/ (or $XDG_CONFIG_HOME/Veydr/): your projects, commands and settings, a backup, and a record of running commands for crash recovery. Output is kept in memory only.',
+  },
+  {
+    q: 'Is it free?',
+    a: 'Yes. Veydr is MIT licensed and developed in the open on GitHub.',
+  },
+];
+---
+
+<section id="readme" class="readme" aria-label="Features">
+  <div class="wrap doc">
+    <nav class="toc" aria-label="Contents">
+      <div class="file mono">README.md</div>
+      {
+        chapters.map(([id, title], i) => (
+          <a href={`#${id}`} data-toc={id}>
+            <span class="mono">{String(i + 1).padStart(2, '0')}</span>
+            {title}
+          </a>
+        ))
+      }
+    </nav>
+
+    <div class="chapters">
+      <article id="projects" class="ch">
+        <span class="n mono">{num('projects')}</span>
+        <h2>Register a project once</h2>
+        <div class="prose-v">
+          <p>
+            A project is a local folder. Add it with the system folder picker and give it the commands you
+            always run there: <strong>the API server, the frontend dev server, the worker, the docs preview</strong>.
+            From then on each one is a click away. Veydr never writes into the folder.
+          </p>
+          <p>
+            Every command has its own working directory inside the project, environment overrides and stop
+            timeout. Run it as an executable with arguments, passed exactly as typed, or as a script through
+            a shell you choose. <strong>Open in editor</strong> launches the editor you configure, with your login
+            environment.
+          </p>
+        </div>
+        <figure class="shot">
+          <Image src={editorShot} alt="The command editor for a shell-mode command named Jobs worker, running through /bin/bash" widths={[760, 1280]} sizes="(min-width: 800px) 760px, 100vw" />
+          <figcaption>Command editor: direct or shell mode, working directory, stop timeout, overrides.</figcaption>
+        </figure>
+      </article>
+
+      <article id="supervision" class="ch">
+        <span class="n mono">{num('supervision')}</span>
+        <h2>Stop means the whole tree</h2>
+        <div class="prose-v">
+          <p>
+            Each command runs in its own process group. <strong>Stop</strong> sends <code>SIGTERM</code> to the
+            command and everything it spawned, then <code>SIGKILL</code> after the stop timeout (5 seconds by
+            default). Anything still alive afterwards is listed, never hidden.
+          </p>
+          <p>
+            Closing Veydr stops every running command first. If a process survives, Veydr asks whether to retry
+            or leave it running.
+          </p>
+        </div>
+        <pre class="term"><span class="d">storefront › API server</span>                       <span class="w">Stopping</span>
+<span class="d">pgid 209927</span>
+├─ 209927  node server.mjs                SIGTERM  <span class="g">exited</span>
+│  └─ 209951  esbuild --service           SIGTERM  <span class="g">exited</span>
+└─ 209960  node worker-pool.mjs           SIGTERM  <span class="y">SIGKILL after 5s</span></pre>
+      </article>
+
+      <article id="output" class="ch">
+        <span class="n mono">{num('output')}</span>
+        <h2>Output you can read</h2>
+        <div class="prose-v">
+          <p>
+            Standard output and standard error arrive live, each line stamped with its capture time and its
+            stream. <strong>ANSI colors and styles are rendered. Every other terminal control sequence is
+            removed</strong>, so a command’s output can’t rename your window or write to your clipboard.
+          </p>
+          <p>
+            Filter by text, show one stream or both, pause and follow, copy what’s visible as plain text.
+            Output lives in memory only, up to 10,000 lines or 8 MiB per run, for the current and the previous
+            run of each command. Nothing is written to disk.
+          </p>
+        </div>
+        <pre class="term log"><span class="d">14:39:49.343</span> <span class="r">err</span>  <span class="y">warn</span> slow query on orders (138ms)
+<span class="d">14:39:49.743</span> <span class="d">out</span>  <b>GET</b>  /api/orders/981        <span class="y">404</span> 16ms
+<span class="d">14:39:50.144</span> <span class="d">out</span>  <b>POST</b> /api/checkout          <span class="g">201</span> 23ms
+<span class="d">14:39:50.545</span> <span class="d">out</span>  build done              <span class="d">← \e]0;title\a removed</span></pre>
+      </article>
+
+      <article id="ports" class="ch">
+        <span class="n mono">{num('ports')}</span>
+        <h2>Who is on :5173?</h2>
+        <div class="prose-v">
+          <p>
+            The <strong>Ports</strong> view lists listening TCP ports, IPv4 and IPv6, and tells you which ones
+            belong to your commands, with the owning process and PID.
+          </p>
+          <p>
+            It is read-only: it never stops, signals or connects to anything. Ports owned by other users or the
+            system are marked <strong>Restricted</strong> instead of being guessed.
+          </p>
+        </div>
+        <figure class="shot">
+          <Image src={portsShot} alt="The Ports view listing ports 4000, 5173 and 8080, each attributed to a command of the storefront or docs-site project" widths={[760, 1048]} sizes="(min-width: 800px) 760px, 100vw" />
+          <figcaption>Each listening port matched to the command that owns it.</figcaption>
+        </figure>
+      </article>
+
+      <article id="environment" class="ch">
+        <span class="n mono">{num('environment')}</span>
+        <h2>The environment it really gets</h2>
+        <div class="prose-v">
+          <p>
+            Commands get the environment your login shell sets up, <code>PATH</code> entries from{' '}
+            <code>~/.profile</code> included, even when Veydr was opened from the desktop launcher.{' '}
+            The <strong>Env</strong> view shows exactly what a command will receive and where each value comes from.
+          </p>
+          <p>
+            Mark an override as secret and it stays masked until you reveal it. If a command prints it, the
+            output shows <code>[redacted]</code> instead (best effort).
+          </p>
+        </div>
+        <figure class="shot">
+          <Image src={envShot} alt="The Env view of the API server command, listing login-environment variables and two overrides, one of them a masked secret" widths={[760, 1280]} sizes="(min-width: 800px) 760px, 100vw" />
+          <figcaption>Env view: the exact environment of a command, with secrets masked.</figcaption>
+        </figure>
+      </article>
+
+      <article id="keyboard" class="ch">
+        <span class="n mono">{num('keyboard')}</span>
+        <h2>Hands on the keyboard</h2>
+        <div class="prose-v">
+          <p>Single-key shortcuts work anywhere outside a text field. Select a command by clicking it or tabbing to it.</p>
+        </div>
+        <dl class="keys">
+          {
+            shortcuts.map(([keys, what]) => (
+              <div>
+                <dt>
+                  {keys.map((k, i) => (
+                    <>
+                      {i > 0 && <span class="sep">/</span>}
+                      <kbd>{k}</kbd>
+                    </>
+                  ))}
+                </dt>
+                <dd>{what}</dd>
+              </div>
+            ))
+          }
+        </dl>
+      </article>
+
+      <article id="local" class="ch">
+        <span class="n mono">{num('local')}</span>
+        <h2>Nothing leaves your machine</h2>
+        <div class="prose-v">
+          <p>
+            Veydr runs entirely on your computer and has <strong>no network access of its own</strong>.
+            Your commands talk to whatever they talk to; Veydr doesn’t.
+          </p>
+        </div>
+        <dl class="facts">
+          {
+            local.map(([k, v]) => (
+              <div>
+                <dt class="mono">{k}</dt>
+                <dd>{v}</dd>
+              </div>
+            ))
+          }
+        </dl>
+      </article>
+
+      <article id="limits" class="ch">
+        <span class="n mono">{num('limits')}</span>
+        <h2>What it doesn’t do (yet)</h2>
+        <div class="prose-v">
+          <p>Veydr is an early release. Better you read this here than find out later.</p>
+        </div>
+        <ul class="limits">
+          <li><b>Linux x64 only.</b> Windows is planned. macOS is not supported.</li>
+          <li><b>Release candidates only.</b> There is no stable release, auto-update or code signing yet.</li>
+          <li><b>Secrets are stored unencrypted</b> in <code>config.json</code>, protected by its <code>0600</code> permissions. Redaction in output is best effort.</li>
+          <li><b>Ubuntu 24.04</b> is not yet validated on a real host, and the AppImage doesn’t start there. Use the <code>.deb</code>.</li>
+          <li><b>Not a terminal.</b> No stdin, no auto-restart, no watch mode, no log files.</li>
+          <li><b>Ports</b> covers listening TCP sockets only. UDP and container-internal ports are not shown.</li>
+        </ul>
+      </article>
+
+      <article id="faq" class="ch">
+        <span class="n mono">{num('faq')}</span>
+        <h2>Questions</h2>
+        <div class="faq">
+          {
+            faq.map(({ q, a }) => (
+              <details>
+                <summary>{q}</summary>
+                <p>{a}</p>
+              </details>
+            ))
+          }
+        </div>
+        <p class="more">
+          Something else? <a href={`${REPO_URL}/issues`}>Open an issue on GitHub</a>.
+        </p>
+      </article>
+    </div>
+  </div>
+</section>
+
+<style>
+  .readme {
+    border-bottom: 1px solid var(--color-line);
+  }
+  .doc {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    padding-top: 96px;
+    padding-bottom: 56px;
+  }
+  @media (min-width: 1000px) {
+    .doc {
+      grid-template-columns: 220px minmax(0, 760px);
+      gap: 96px;
+    }
+  }
+
+  /* Contents */
+  .toc {
+    display: none;
+  }
+  @media (min-width: 1000px) {
+    .toc {
+      display: block;
+      position: sticky;
+      top: 48px;
+      align-self: start;
+      font-size: 14px;
+    }
+  }
+  .file {
+    font-size: 12px;
+    color: var(--color-dim);
+    padding-bottom: 14px;
+    margin-bottom: 10px;
+    border-bottom: 1px solid var(--color-line);
+  }
+  .toc a {
+    display: flex;
+    gap: 12px;
+    padding: 7px 0;
+    color: var(--color-dim);
+    transition: color 0.2s;
+  }
+  .toc a span {
+    font-size: 12px;
+    line-height: 20px;
+    color: #3d424c;
+    transition: color 0.2s;
+  }
+  .toc a:hover {
+    color: var(--color-mute);
+  }
+  .toc a.on {
+    color: var(--color-fg);
+  }
+  .toc a.on span {
+    color: var(--color-brand);
+  }
+
+  /* Chapters */
+  .ch {
+    scroll-margin-top: 40px;
+    padding-bottom: 88px;
+  }
+  .n {
+    display: block;
+    font-size: 12px;
+    color: var(--color-brand);
+  }
+  .ch h2 {
+    margin: 10px 0 20px;
+    font-size: clamp(28px, 3.4vw, 40px);
+    line-height: 1.08;
+    font-weight: 560;
+    letter-spacing: -0.03em;
+  }
+  .ch .prose-v {
+    font-size: 16.5px;
+    max-width: 680px;
+  }
+
+  .shot {
+    margin-top: 32px;
+  }
+  .shot :global(img) {
+    display: block;
+    width: 100%;
+    height: auto;
+    border: 1px solid var(--color-line);
+    border-radius: 8px;
+  }
+  figcaption {
+    margin-top: 12px;
+    font-size: 13px;
+    color: var(--color-dim);
+  }
+
+  .term {
+    margin-top: 28px;
+    padding: 18px 20px;
+    background: var(--color-log);
+    border: 1px solid var(--color-line-soft);
+    border-radius: 8px;
+    font-size: 12.5px;
+    line-height: 1.75;
+    color: var(--color-fg);
+    overflow-x: auto;
+  }
+  .term .d {
+    color: var(--color-dim);
+  }
+  .term .g {
+    color: var(--color-ok);
+  }
+  .term .y {
+    color: var(--color-warn);
+  }
+  .term .r {
+    color: var(--color-err);
+  }
+  .term .w {
+    padding: 1px 7px;
+    border-radius: 999px;
+    background: var(--color-warn-bg);
+    color: var(--color-warn);
+  }
+
+  .keys {
+    margin-top: 28px;
+    display: grid;
+    gap: 1px;
+    background: var(--color-line);
+    border: 1px solid var(--color-line);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  @media (min-width: 640px) {
+    .keys {
+      grid-template-columns: 1fr 1fr;
+    }
+  }
+  .keys div {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 12px 16px;
+    background: var(--color-bg);
+  }
+  .keys dt {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 64px;
+  }
+  .keys .sep {
+    color: var(--color-dim);
+    font-size: 12px;
+  }
+  .keys dd {
+    font-size: 14.5px;
+    color: var(--color-mute);
+  }
+
+  .facts {
+    margin-top: 28px;
+    border-top: 1px solid var(--color-line);
+  }
+  .facts div {
+    display: grid;
+    gap: 4px;
+    padding: 14px 0;
+    border-bottom: 1px solid var(--color-line);
+  }
+  @media (min-width: 640px) {
+    .facts div {
+      grid-template-columns: 200px 1fr;
+      gap: 24px;
+    }
+  }
+  .facts dt {
+    font-size: 13px;
+    color: var(--color-fg);
+  }
+  .facts dd {
+    font-size: 15px;
+    color: var(--color-mute);
+  }
+
+  .limits {
+    margin-top: 24px;
+    display: grid;
+    gap: 12px;
+  }
+  .limits li {
+    position: relative;
+    padding-left: 22px;
+    font-size: 15.5px;
+    line-height: 1.6;
+    color: var(--color-mute);
+  }
+  .limits li::before {
+    content: '–';
+    position: absolute;
+    left: 0;
+    color: var(--color-dim);
+  }
+  .limits b {
+    color: var(--color-fg);
+    font-weight: 500;
+  }
+  .limits code {
+    font-size: 0.88em;
+    color: var(--color-fg);
+  }
+
+  .faq {
+    border-top: 1px solid var(--color-line);
+  }
+  details {
+    border-bottom: 1px solid var(--color-line);
+  }
+  summary {
+    list-style: none;
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 18px 0;
+    font-size: 16px;
+    cursor: pointer;
+  }
+  summary::-webkit-details-marker {
+    display: none;
+  }
+  summary::after {
+    content: '+';
+    font-family: var(--font-mono);
+    color: var(--color-dim);
+    transition: transform 0.2s;
+  }
+  details[open] summary::after {
+    transform: rotate(45deg);
+  }
+  details p {
+    padding: 0 0 20px;
+    max-width: 640px;
+    font-size: 15px;
+    line-height: 1.7;
+    color: var(--color-mute);
+  }
+  .more {
+    margin-top: 24px;
+    font-size: 15px;
+    color: var(--color-mute);
+  }
+  .more a {
+    color: var(--color-fg);
+    border-bottom: 1px solid var(--color-line);
+  }
+</style>
+
+<script>
+  // Highlight the chapter being read in the contents column.
+  const links = new Map<string, HTMLElement>();
+  document.querySelectorAll<HTMLElement>('[data-toc]').forEach((a) => links.set(a.dataset.toc!, a));
+
+  const observer = new IntersectionObserver(
+    (entries) => {
+      for (const e of entries) {
+        if (!e.isIntersecting) continue;
+        links.forEach((a, id) => a.classList.toggle('on', id === e.target.id));
+      }
+    },
+    { rootMargin: '-35% 0px -60% 0px' },
+  );
+  links.forEach((_, id) => {
+    const el = document.getElementById(id);
+    if (el) observer.observe(el);
+  });
+</script>

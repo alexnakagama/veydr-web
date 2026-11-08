@@ -1,0 +1,65 @@
+---
+import { REPO_URL } from '../lib/release';
+import Logo from '../assets/brand/veydr-logo.svg';
+---
+
+<header class="nav">
+  <div class="wrap row">
+    <a href="/" class="brand" aria-label="Veydr home">
+      <Logo width={92} height={27} aria-hidden="true" />
+    </a>
+    <nav aria-label="Main" class="links">
+      <a href="#readme">Features</a>
+      <a href="#install">Install</a>
+      <a href={`${REPO_URL}/tree/master/docs`}>Docs</a>
+    </nav>
+    <div class="end">
+      <a href={REPO_URL} class="gh">GitHub <span aria-hidden="true">↗</span></a>
+      <a href="#install" class="btn">Download</a>
+    </div>
+  </div>
+</header>
+
+<style>
+  .nav {
+    position: relative;
+    z-index: 10;
+    height: 72px;
+  }
+  .row {
+    height: 100%;
+    display: flex;
+    align-items: center;
+    gap: 36px;
+  }
+  .brand {
+    display: flex;
+    margin-top: 2px;
+  }
+  .links {
+    display: none;
+    gap: 26px;
+    font-size: 14px;
+    color: var(--color-mute);
+  }
+  .links a:hover,
+  .gh:hover {
+    color: var(--color-fg);
+  }
+  .end {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    font-size: 14px;
+  }
+  .gh {
+    color: var(--color-mute);
+    transition: color 0.15s;
+  }
+  @media (min-width: 720px) {
+    .links {
+      display: flex;
+    }
+  }
+</style>
