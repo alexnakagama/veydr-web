@@ -15,25 +15,25 @@ The project drive is exFAT, which can't hold symlinks, so `.npmrc` sets `bin-lin
 
 ## How release data gets in
 
-`src/lib/release.ts` reads the latest release from the GitHub API **at build time**: tag, date, `.deb`/AppImage URLs and sizes, and the hashes in `SHA256SUMS`. If GitHub can't be reached, the build uses the last known release instead of failing. Set `GITHUB_TOKEN` in Vercel to avoid the anonymous rate limit (optional).
+`src/lib/release.ts` reads the releases from the GitHub API **at build time** and shows the newest published release that has both packages and `SHA256SUMS` fully uploaded (the newest stable one once there is one, else the newest release candidate). It shows the tag, date, download URLs, sizes and the SHA-256 hashes from `SHA256SUMS`.
+
+Requests time out after 15 s and are retried 3 times. If it still fails:
+
+| Where | What happens |
+|---|---|
+| Vercel production (`VERCEL_ENV=production`) or `RELEASE_STRICT=1` | The build **fails**. Vercel keeps serving the previous deployment, so the live site never shows stale or broken downloads |
+| Local dev, preview deployments | Falls back to the last known release (`v0.1.0-rc.1`) with a warning |
+
+### Vercel environment variables
+
+| Name | Value | Needed |
+|---|---|---|
+| `SITE_URL` | `https://veydr-web.vercel.app` | Yes: canonical URL, Open Graph image, sitemap |
+| `GITHUB_TOKEN` | Fine-grained token, **Public repositories (read-only)**, no other permissions | Strongly recommended: Vercel's build machines share IPs, and the anonymous API limit (60/hour) would fail production builds |
 
 ### Rebuild on every Veydr release
 
-1. Vercel → Project → Settings → Git → **Deploy Hooks**: create a hook and copy its URL.
-2. In the `veydr` repo, add it as the secret `VERCEL_DEPLOY_HOOK` and add this workflow:
-
-```yaml
-# .github/workflows/website.yml
-name: Rebuild website
-on:
-  release:
-    types: [published]
-jobs:
-  deploy:
-    runs-on: ubuntu-latest
-    steps:
-      - run: curl -fsS -X POST "${{ secrets.VERCEL_DEPLOY_HOOK }}"
-```
+`alexnakagama/veydr` has `.github/workflows/website.yml`. When a release is published, edited, unpublished or deleted, it `POST`s to a Vercel Deploy Hook stored there as the secret `VERCEL_DEPLOY_HOOK`. Setup and details: [veydr docs/ci.md#website](https://github.com/alexnakagama/veydr/blob/master/docs/ci.md#website).
 
 ## Assets
 
