@@ -1,0 +1,106 @@
+---
+// One line of the tour's output pane: capture time, stream, a mono message, and (for `out` lines)
+// the explanation underneath, the way Veydr prints a line and you read what it means.
+interface Props {
+  time: string;
+  stream: 'out' | 'err';
+  msg: string;
+  id?: string;
+}
+const { time, stream, msg, id } = Astro.props;
+---
+
+<article class:list={['entry', stream]} data-entry data-stream={stream} id={id}>
+  <div class="gut mono" aria-hidden="true">
+    <span class="t">{time}</span>
+    <span class="s">{stream}</span>
+  </div>
+  <div class="body">
+    <p class="msg mono" set:html={msg} />
+    <slot />
+  </div>
+</article>
+
+<style>
+  .entry {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 4px;
+    padding: 18px 16px;
+    border-top: 1px solid var(--color-line-soft);
+    scroll-margin-top: 80px;
+  }
+  .gut {
+    display: flex;
+    gap: 10px;
+    font-size: 12px;
+    line-height: 22px;
+  }
+  .t {
+    display: none;
+    color: var(--color-dim);
+    font-variant-numeric: tabular-nums;
+  }
+  .s {
+    color: var(--color-mute);
+  }
+  .err .s {
+    color: var(--color-err);
+  }
+  .msg {
+    font-size: 13.5px;
+    line-height: 22px;
+    color: var(--color-fg);
+    overflow-wrap: anywhere;
+  }
+  .msg :global(.d) {
+    color: var(--color-dim);
+  }
+  .msg :global(.g) {
+    color: var(--color-ok);
+  }
+  .msg :global(.y) {
+    color: var(--color-warn);
+  }
+  .msg :global(.c) {
+    color: #7dd3fc;
+  }
+  .msg :global(b) {
+    font-weight: 600;
+  }
+
+  .body :global(h3) {
+    margin: 18px 0 12px;
+    font-family: var(--font-sans);
+    font-size: clamp(22px, 2.6vw, 30px);
+    line-height: 1.12;
+    font-weight: 560;
+    letter-spacing: -0.025em;
+  }
+  .body :global(.prose-v) {
+    max-width: 640px;
+    font-size: 16px;
+  }
+  .err .body :global(.note) {
+    margin-top: 4px;
+    max-width: 640px;
+    font-size: 14.5px;
+    line-height: 1.6;
+    color: var(--color-mute);
+  }
+
+  @media (min-width: 720px) {
+    .entry {
+      grid-template-columns: 172px minmax(0, 1fr);
+      gap: 0 20px;
+      padding: 22px 28px 26px 20px;
+    }
+    .t {
+      display: inline;
+    }
+    .entry.err {
+      padding-top: 12px;
+      padding-bottom: 14px;
+    }
+  }
+</style>

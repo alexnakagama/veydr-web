@@ -1,0 +1,685 @@
+---
+// The feature tour, told as one day of Veydr's own output: what it does arrives on `out`, what it
+// doesn't do (yet) on `err`. The pane's filter and stream switch work, like the app's.
+import { Image } from 'astro:assets';
+import LogEntry from './LogEntry.astro';
+import editorShot from '../assets/screenshots/command-editor.png';
+import envShot from '../assets/screenshots/command-environment.png';
+import portsShot from '../assets/screenshots/ports.png';
+import { REPO_URL } from '../lib/release';
+
+const shortcuts = [
+  [['s'], 'Start'],
+  [['x'], 'Stop'],
+  [['r'], 'Restart'],
+  [['/'], 'Filter projects'],
+  [['j', 'k'], 'Next / previous project'],
+  [['?'], 'All shortcuts'],
+] as const;
+
+const local = [
+  ['accounts', 'none'],
+  ['telemetry', 'none'],
+  ['update checks', 'none'],
+  ['remote content', 'none'],
+  ['~/.config/Veydr/', 'one JSON file, mode 0600, saved atomically, with a backup'],
+  ['sandbox', 'Chromium sandbox with context isolation; Veydr refuses to start without it'],
+];
+
+const limits = [
+  {
+    key: 'platform',
+    msg: 'Linux x64 only',
+    note: 'Windows support is planned. macOS is not supported.',
+  },
+  {
+    key: 'release',
+    msg: 'release candidates only',
+    note: 'No stable release yet, and no auto-update or code signing.',
+  },
+  {
+    key: 'secrets',
+    msg: 'stored unencrypted in config.json',
+    note: 'Protected only by the file’s 0600 permissions. Redaction in output is best effort: transformed, split or very short values are not caught.',
+  },
+  {
+    key: 'ubuntu 24.04',
+    msg: 'not validated on a real host',
+    note: 'The .deb passes in a container. The AppImage does not start on a stock Ubuntu 24.04 desktop; use the .deb there.',
+  },
+  {
+    key: 'stdin',
+    msg: 'not connected',
+    note: 'Veydr is not a terminal: no interactive input, no auto-restart, no watch mode, no log files.',
+  },
+  {
+    key: 'ports',
+    msg: 'listening TCP sockets only',
+    note: 'UDP, outgoing connections and ports inside containers are not shown.',
+  },
+];
+
+const faq = [
+  {
+    q: 'Is Veydr a terminal emulator?',
+    a: 'No, on purpose. Commands get no interactive input, and only colors are rendered. It is for the long-running things you start and watch, not for typing into.',
+  },
+  {
+    q: 'Does it restart a command that crashes?',
+    a: 'No. A command that exits shows its exit code or signal and stays that way until you press Start.',
+  },
+  {
+    q: 'Which systems does it run on?',
+    a: 'Linux x64. The packages pass the built-in smoke test on Debian 12 and 13, Ubuntu 22.04 and Fedora 44 (AppImage). Ubuntu 24.04 passes in a container but has not been validated on a real host yet.',
+  },
+  {
+    q: 'What happens if Veydr itself crashes?',
+    a: 'Your commands keep running. On the next launch Veydr lists the processes they left behind, and you choose to Terminate them or Leave running. It never signals anything on its own.',
+  },
+  {
+    q: 'Where is my data?',
+    a: 'In ~/.config/Veydr/ (or $XDG_CONFIG_HOME/Veydr/): your projects, commands and settings, a backup, and a record of running commands for crash recovery. Output is kept in memory only.',
+  },
+  {
+    q: 'Is it free?',
+    a: 'Yes. Veydr is MIT licensed and developed in the open on GitHub.',
+  },
+];
+---
+
+<section id="tour" class="tour" aria-labelledby="tour-h">
+  <div class="wrap">
+    <header class="intro">
+      <h2 id="tour-h">A day in the output pane. <span>Everything Veydr does, as it would log it.</span></h2>
+      <p>
+        Features arrive on <code class="o">out</code>, the things it doesn’t do yet on <code class="e">err</code>.
+        It’s an output pane, so it works like one: filter it, or switch streams.
+      </p>
+    </header>
+
+    <div class="pane">
+      <div class="bar" data-bar>
+        <span class="title"><b>Output</b> — veydr</span>
+        <input type="search" class="filter" placeholder="Filter output" aria-label="Filter the tour" data-filter hidden />
+        <div class="seg" role="group" aria-label="Stream" data-seg hidden>
+          <button type="button" data-stream-btn="both" aria-pressed="true">Both streams</button>
+          <button type="button" data-stream-btn="out" aria-pressed="false">out</button>
+          <button type="button" data-stream-btn="err" aria-pressed="false">err</button>
+        </div>
+        <span class="count mono" data-count aria-live="polite"></span>
+      </div>
+
+      <div class="lines" data-lines>
+        <LogEntry
+          id="projects"
+          time="09:00:02.114"
+          stream="out"
+          msg={'added project <b>storefront</b> <span class="d">→</span> ~/projects/storefront <span class="d">· 3 commands</span>'}
+        >
+          <h3>Register a project once.</h3>
+          <div class="prose-v">
+            <p>
+              A project is a local folder. Add it with the system folder picker and give it the commands you
+              always run there: <strong>the API server, the frontend dev server, the worker, the docs preview</strong>.
+              Veydr never writes into the folder.
+            </p>
+            <p>
+              Each command has its own working directory, environment overrides and stop timeout. It runs as
+              an executable with arguments, passed exactly as typed, or as a script through a shell you choose.
+            </p>
+          </div>
+          <figure class="shot">
+            <Image src={editorShot} alt="The command editor for a shell-mode command named Jobs worker, running through /bin/bash" widths={[760, 1280]} sizes="(min-width: 800px) 760px, 100vw" />
+          </figure>
+        </LogEntry>
+
+        <LogEntry
+          id="keyboard"
+          time="09:00:04.870"
+          stream="out"
+          msg={'key <b>s</b> <span class="d">→</span> start API server <span class="d">·</span> <span class="g">Running</span> <span class="d">· PID 209927</span>'}
+        >
+          <h3>Hands stay on the keyboard.</h3>
+          <div class="prose-v">
+            <p>Single keys, anywhere outside a text field. Select a command by clicking it or tabbing to it.</p>
+          </div>
+          <ul class="keys">
+            {
+              shortcuts.map(([keys, what]) => (
+                <li>
+                  <span class="kk">
+                    {keys.map((k, i) => (
+                      <>
+                        {i > 0 && <span class="sep">/</span>}
+                        <kbd>{k}</kbd>
+                      </>
+                    ))}
+                  </span>
+                  {what}
+                </li>
+              ))
+            }
+          </ul>
+        </LogEntry>
+
+        <LogEntry
+          id="output"
+          time="09:00:05.312"
+          stream="out"
+          msg={'API server <span class="d">·</span> colors kept <span class="d">·</span> <span class="y">\\e]0;title\\a</span> removed'}
+        >
+          <h3>Output you can trust on screen.</h3>
+          <div class="prose-v">
+            <p>
+              Standard output and standard error arrive live, each line stamped with its capture time and stream,
+              like the ones on this page. <strong>ANSI colors are rendered; every other control sequence is
+              removed</strong>, so a command’s output can’t rename your window or write to your clipboard.
+            </p>
+            <p>
+              Filter, switch streams, pause and follow, copy what’s visible. Output lives in memory only: up to
+              10,000 lines or 8 MiB per run, for the current and the previous run. Nothing is written to disk.
+            </p>
+          </div>
+        </LogEntry>
+
+        <LogEntry
+          id="ports"
+          time="09:00:05.904"
+          stream="out"
+          msg={'<span class="c">:4000</span> <span class="d">←</span> API server <span class="d">·</span> <span class="c">:5173</span> <span class="d">←</span> Web dev server <span class="d">·</span> <span class="c">:8080</span> <span class="d">←</span> Preview'}
+        >
+          <h3>You know who is on :5173.</h3>
+          <div class="prose-v">
+            <p>
+              The <strong>Ports</strong> view lists listening TCP ports, IPv4 and IPv6, and matches each one to the
+              command and PID that owns it. It never stops, signals or connects to anything, and ports owned by
+              other users are marked <strong>Restricted</strong> instead of guessed.
+            </p>
+          </div>
+          <figure class="shot">
+            <Image src={portsShot} alt="The Ports view listing ports 4000, 5173 and 8080, each attributed to a command of the storefront or docs-site project" widths={[760, 1048]} sizes="(min-width: 800px) 760px, 100vw" />
+          </figure>
+        </LogEntry>
+
+        <LogEntry
+          id="environment"
+          time="09:00:07.550"
+          stream="out"
+          msg={'env API server <span class="d">·</span> login shell <span class="d">·</span> 2 overrides <span class="d">·</span> STRIPE_SECRET_KEY <span class="y">[redacted]</span>'}
+        >
+          <h3>The environment it really gets.</h3>
+          <div class="prose-v">
+            <p>
+              Commands get the environment your login shell sets up, <code>PATH</code> from{' '}
+              <code>~/.profile</code> included, even when Veydr was opened from the desktop launcher.{' '}
+              The <strong>Env</strong> view shows every value and where it came from.
+            </p>
+            <p>
+              Mark an override as secret and it stays masked until you reveal it. If a command prints it, the
+              output shows <code>[redacted]</code> instead.
+            </p>
+          </div>
+          <figure class="shot">
+            <Image src={envShot} alt="The Env view of the API server command, listing login-environment variables and two overrides, one of them a masked secret" widths={[760, 1280]} sizes="(min-width: 800px) 760px, 100vw" />
+          </figure>
+        </LogEntry>
+
+        <LogEntry
+          id="supervision"
+          time="18:42:31.006"
+          stream="out"
+          msg={'stop API server <span class="d">→</span> SIGTERM pgid 209927 <span class="d">·</span> 3 processes <span class="d">·</span> <span class="g">all exited</span> <span class="d">in 0.4s</span>'}
+        >
+          <h3>Stop means the whole tree.</h3>
+          <div class="prose-v">
+            <p>
+              Each command runs in its own process group. <strong>Stop</strong> sends <code>SIGTERM</code> to it and
+              everything it spawned, then <code>SIGKILL</code> after the stop timeout (5 seconds by default).
+              Anything still alive afterwards is listed, never hidden.
+            </p>
+            <p>
+              Nothing restarts on its own. When you quit, Veydr stops what it started, and asks before it leaves
+              anything running. After a crash, the next launch lists what was left behind and lets you choose.
+            </p>
+          </div>
+          <pre class="tree"><span class="d">pgid 209927</span>
+├─ 209927  node server.mjs              SIGTERM  <span class="g">exited</span>
+│  └─ 209951  esbuild --service         SIGTERM  <span class="g">exited</span>
+└─ 209960  node worker-pool.mjs         SIGTERM  <span class="y">SIGKILL after 5s</span></pre>
+        </LogEntry>
+
+        <LogEntry
+          id="local"
+          time="18:42:31.402"
+          stream="out"
+          msg={'quit <span class="d">·</span> <b>0</b> network requests made by Veydr today'}
+        >
+          <h3>Nothing leaves your machine.</h3>
+          <div class="prose-v">
+            <p>
+              Veydr has <strong>no network access of its own</strong>. Your commands talk to whatever they talk to;
+              Veydr doesn’t.
+            </p>
+          </div>
+          <dl class="facts">
+            {
+              local.map(([k, v]) => (
+                <div>
+                  <dt class="mono">{k}</dt>
+                  <dd>{v}</dd>
+                </div>
+              ))
+            }
+          </dl>
+        </LogEntry>
+
+        {
+          limits.map((l, i) => (
+            <LogEntry
+              id={i === 0 ? 'limits' : undefined}
+              time={`18:42:31.${String(410 + i * 7)}`}
+              stream="err"
+              msg={`<span class="y">limit</span> <b>${l.key}</b> <span class="d">·</span> ${l.msg}`}
+            >
+              <p class="note">{l.note}</p>
+            </LogEntry>
+          ))
+        }
+
+        <p class="empty mono" data-empty hidden>No lines match the filter.</p>
+      </div>
+    </div>
+
+    <div id="faq" class="faq">
+      <h2>Questions</h2>
+      <div class="qa">
+        {
+          faq.map(({ q, a }) => (
+            <details>
+              <summary>{q}</summary>
+              <p>{a}</p>
+            </details>
+          ))
+        }
+      </div>
+      <p class="more">
+        Something else? <a href={`${REPO_URL}/issues`}>Open an issue on GitHub</a>.
+      </p>
+    </div>
+  </div>
+</section>
+
+<style>
+  .tour {
+    padding: 104px 0 96px;
+    border-bottom: 1px solid var(--color-line);
+  }
+  .intro h2 {
+    max-width: 860px;
+    font-size: clamp(32px, 4.4vw, 56px);
+    line-height: 1.04;
+    font-weight: 560;
+    letter-spacing: -0.035em;
+  }
+  .intro h2 span {
+    color: var(--color-mute);
+  }
+  .intro p {
+    margin-top: 20px;
+    max-width: 560px;
+    font-size: 17px;
+    line-height: 1.6;
+    color: var(--color-mute);
+  }
+  .intro code {
+    font-size: 0.9em;
+    padding: 1px 6px;
+    border-radius: 4px;
+    background: var(--color-raised);
+  }
+  .intro .o {
+    color: var(--color-fg);
+  }
+  .intro .e {
+    color: var(--color-err);
+  }
+
+  /* The pane */
+  .pane {
+    margin-top: 48px;
+    border: 1px solid var(--color-line);
+    border-radius: 10px;
+    background: var(--color-log);
+  }
+  .bar {
+    position: sticky;
+    top: 0;
+    z-index: 5;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px 10px 16px;
+    background: var(--color-raised);
+    border-bottom: 1px solid var(--color-line);
+    border-radius: 10px 10px 0 0;
+  }
+  .title {
+    margin-right: auto;
+    font-size: 14px;
+    color: var(--color-mute);
+  }
+  .title b {
+    color: var(--color-fg);
+    font-weight: 600;
+  }
+  .filter {
+    width: 200px;
+    max-width: 100%;
+    height: 30px;
+    padding: 0 10px;
+    border: 1px solid var(--color-line);
+    border-radius: 6px;
+    background: var(--color-log);
+    color: var(--color-fg);
+    font: inherit;
+    font-size: 13px;
+  }
+  .filter::placeholder {
+    color: var(--color-dim);
+  }
+  .seg {
+    display: inline-flex;
+    border: 1px solid var(--color-line);
+    border-radius: 6px;
+    overflow: hidden;
+  }
+  .seg button {
+    height: 28px;
+    padding: 0 10px;
+    font-size: 13px;
+    color: var(--color-dim);
+    background: transparent;
+    cursor: pointer;
+    transition: color 0.15s, background 0.15s;
+  }
+  .seg button + button {
+    border-left: 1px solid var(--color-line);
+  }
+  .seg button:hover {
+    color: var(--color-fg);
+  }
+  .seg button[aria-pressed='true'] {
+    color: var(--color-fg);
+    background: #2a303a;
+    box-shadow: inset 0 -2px 0 var(--color-brand);
+  }
+  .seg button[data-stream-btn='out'],
+  .seg button[data-stream-btn='err'] {
+    font-family: var(--font-mono);
+  }
+  .seg button[data-stream-btn='err'][aria-pressed='true'] {
+    color: var(--color-err);
+    box-shadow: inset 0 -2px 0 var(--color-err);
+  }
+  .count {
+    min-width: 76px;
+    text-align: right;
+    font-size: 12px;
+    color: var(--color-dim);
+  }
+  @media (max-width: 719px) {
+    .title {
+      width: 100%;
+    }
+    .filter {
+      flex: 1;
+    }
+    .count {
+      display: none;
+    }
+  }
+
+  .lines {
+    padding-bottom: 8px;
+  }
+  .lines > :global(.entry:first-child) {
+    border-top: 0;
+  }
+  .lines :global(.entry[hidden]) {
+    display: none;
+  }
+  .lines :global(.entry.flash) {
+    animation: flash 1.2s ease-out;
+  }
+  @keyframes flash {
+    from {
+      background: #2dd4bf14;
+    }
+  }
+  .empty {
+    padding: 28px 20px;
+    font-size: 13px;
+    color: var(--color-dim);
+  }
+
+  .shot {
+    margin-top: 24px;
+    max-width: 760px;
+  }
+  .shot :global(img) {
+    display: block;
+    width: 100%;
+    height: auto;
+    border: 1px solid var(--color-line);
+    border-radius: 8px;
+  }
+
+  .keys {
+    margin-top: 20px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px 22px;
+    font-size: 14px;
+    color: var(--color-mute);
+  }
+  .keys li {
+    display: inline-flex;
+    align-items: center;
+    gap: 9px;
+  }
+  .kk {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+  }
+  .sep {
+    color: var(--color-dim);
+    font-size: 12px;
+  }
+
+  .tree {
+    margin-top: 22px;
+    max-width: 760px;
+    padding: 16px 18px;
+    border: 1px solid var(--color-line-soft);
+    border-radius: 8px;
+    background: var(--color-bg);
+    font-size: 12.5px;
+    line-height: 1.75;
+    overflow-x: auto;
+  }
+  .tree .d {
+    color: var(--color-dim);
+  }
+  .tree .g {
+    color: var(--color-ok);
+  }
+  .tree .y {
+    color: var(--color-warn);
+  }
+
+  .facts {
+    margin-top: 20px;
+    max-width: 640px;
+    font-size: 14.5px;
+  }
+  .facts div {
+    display: grid;
+    gap: 2px;
+    padding: 9px 0;
+    border-bottom: 1px dashed var(--color-line);
+  }
+  .facts div:last-child {
+    border-bottom: 0;
+  }
+  @media (min-width: 640px) {
+    .facts div {
+      grid-template-columns: 170px 1fr;
+      gap: 20px;
+    }
+  }
+  .facts dt {
+    font-size: 13px;
+    color: var(--color-fg);
+  }
+  .facts dd {
+    color: var(--color-mute);
+  }
+
+  /* Questions */
+  .faq {
+    margin-top: 96px;
+    display: grid;
+    gap: 24px;
+    scroll-margin-top: 40px;
+  }
+  @media (min-width: 900px) {
+    .faq {
+      grid-template-columns: 280px minmax(0, 1fr);
+      gap: 48px;
+    }
+  }
+  .faq h2 {
+    font-size: clamp(28px, 3.4vw, 40px);
+    line-height: 1.08;
+    font-weight: 560;
+    letter-spacing: -0.03em;
+  }
+  .qa {
+    border-top: 1px solid var(--color-line);
+  }
+  details {
+    border-bottom: 1px solid var(--color-line);
+  }
+  summary {
+    list-style: none;
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 18px 0;
+    font-size: 16px;
+    cursor: pointer;
+  }
+  summary::-webkit-details-marker {
+    display: none;
+  }
+  summary::after {
+    content: '+';
+    font-family: var(--font-mono);
+    color: var(--color-dim);
+    transition: transform 0.2s;
+  }
+  details[open] summary::after {
+    transform: rotate(45deg);
+  }
+  details p {
+    padding: 0 0 20px;
+    max-width: 640px;
+    font-size: 15px;
+    line-height: 1.7;
+    color: var(--color-mute);
+  }
+  .more {
+    font-size: 15px;
+    color: var(--color-mute);
+  }
+  @media (min-width: 900px) {
+    .more {
+      grid-column: 2;
+    }
+  }
+  .more a {
+    color: var(--color-fg);
+    border-bottom: 1px solid var(--color-line);
+  }
+</style>
+
+<script>
+  const filter = document.querySelector<HTMLInputElement>('[data-filter]');
+  const seg = document.querySelector<HTMLElement>('[data-seg]');
+  const count = document.querySelector<HTMLElement>('[data-count]');
+  const empty = document.querySelector<HTMLElement>('[data-empty]');
+  const entries = [...document.querySelectorAll<HTMLElement>('[data-entry]')];
+  const buttons = [...document.querySelectorAll<HTMLButtonElement>('[data-stream-btn]')];
+
+  if (filter && seg && count && empty) {
+    // Controls only appear when they work.
+    filter.hidden = false;
+    seg.hidden = false;
+
+    const text = new Map(entries.map((e) => [e, (e.textContent ?? '').toLowerCase().replace(/\s+/g, ' ')]));
+    let stream = 'both';
+
+    const apply = () => {
+      const q = filter.value.trim().toLowerCase();
+      let shown = 0;
+      for (const e of entries) {
+        const visible = (stream === 'both' || e.dataset.stream === stream) && (!q || text.get(e)!.includes(q));
+        e.hidden = !visible;
+        if (visible) shown++;
+      }
+      empty.hidden = shown > 0;
+      count.textContent = shown === entries.length ? `${entries.length} lines` : `${shown} of ${entries.length} lines`;
+    };
+
+    const setStream = (value: string) => {
+      stream = value;
+      buttons.forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.streamBtn === value)));
+      apply();
+    };
+
+    buttons.forEach((b) => b.addEventListener('click', () => setStream(b.dataset.streamBtn!)));
+    filter.addEventListener('input', apply);
+    filter.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        filter.value = '';
+        apply();
+      }
+    });
+
+    // `/` focuses the filter, as in the app (outside text fields).
+    document.addEventListener('keydown', (e) => {
+      const t = e.target as HTMLElement;
+      if (e.key !== '/' || e.metaKey || e.ctrlKey || e.altKey || t.closest('input, textarea, [contenteditable]')) return;
+      const pane = filter.closest('.pane')!.getBoundingClientRect();
+      if (pane.bottom < 0 || pane.top > innerHeight) return;
+      e.preventDefault();
+      filter.focus();
+    });
+
+    // Links to #limits (footer) show the err stream; any other anchor into the pane clears filters.
+    const reveal = () => {
+      const target = location.hash && document.getElementById(location.hash.slice(1));
+      if (!target || !target.matches('[data-entry]')) return;
+      filter.value = '';
+      setStream(location.hash === '#limits' ? 'err' : 'both');
+      target.classList.remove('flash');
+      void target.offsetWidth;
+      target.classList.add('flash');
+    };
+    addEventListener('hashchange', reveal);
+    apply();
+    reveal();
+  }
+</script>
